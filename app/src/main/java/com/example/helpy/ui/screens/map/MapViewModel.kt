@@ -39,21 +39,27 @@ class MapViewModel(
         val end = _endPoint.value
         
         if (start == null || end == null || _isLoadingRoute.value) {
+            println("⚠️ Cannot find route: start=$start, end=$end, loading=${_isLoadingRoute.value}")
             return
         }
+
+        println("🚀 Starting route finding from (${start.latitude}, ${start.longitude}) to (${end.latitude}, ${end.longitude})")
 
         viewModelScope.launch {
             _isLoadingRoute.value = true
             try {
                 val result = getRouteUseCase.execute(start, end)
                 if (result.isSuccess) {
-                    _routePath.value = result.getOrThrow()
+                    val path = result.getOrThrow()
+                    println("✅ Route found with ${path.size} nodes")
+                    _routePath.value = path
                 } else {
-                    // Handle error - could emit error state
+                    println("❌ Route finding failed: ${result.exceptionOrNull()?.message}")
                     _routePath.value = emptyList()
                 }
             } catch (e: Exception) {
-                // Handle error
+                println("💥 Exception during route finding: ${e.message}")
+                e.printStackTrace()
                 _routePath.value = emptyList()
             } finally {
                 _isLoadingRoute.value = false

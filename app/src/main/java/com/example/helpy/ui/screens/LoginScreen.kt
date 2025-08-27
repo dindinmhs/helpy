@@ -1,11 +1,17 @@
 package com.example.helpy.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -35,39 +41,84 @@ fun LoginScreen(
     }
 
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.05f),
+                        MaterialTheme.colorScheme.background
+                    )
+                )
+            ),
         contentAlignment = Alignment.Center
     ) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(32.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-            shape = RoundedCornerShape(16.dp)
+                .padding(24.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
+            shape = RoundedCornerShape(24.dp)
         ) {
             Column(
                 modifier = Modifier.padding(32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(24.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // App Logo or Title
+                // App Icon/Logo
+                Surface(
+                    modifier = Modifier.size(80.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.primary
+                ) {
+                    Icon(
+                        Icons.Filled.LocationOn,
+                        contentDescription = "Helpy Logo",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+                
+                // App Title
                 Text(
-                    text = "Welcome!",
-                    fontSize = 28.sp,
+                    text = "Helpy",
+                    fontSize = 32.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
-
+                
                 Text(
-                    text = "Sign in to continue",
+                    text = "Smart Navigation & Emergency Assistant",
                     fontSize = 16.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
                 )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Google Sign-In Button
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // Features List
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        FeatureItem("🗺️", "Smart Navigation", "A* pathfinding algorithm")
+                        FeatureItem("🆘", "Emergency SOS", "Quick access to emergency services")
+                        FeatureItem("📍", "Real-time Location", "GPS tracking & location services")
+                        FeatureItem("🔒", "Secure Login", "Google authentication")
+                    }
+                }
+                
+                // Login Button
                 Button(
                     onClick = {
                         scope.launch {
@@ -78,47 +129,71 @@ fun LoginScreen(
                         .fillMaxWidth()
                         .height(56.dp),
                     enabled = !isLoading,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    ),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = ButtonDefaults.buttonElevation(
+                        defaultElevation = 8.dp
+                    )
                 ) {
                     if (isLoading) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            strokeWidth = 2.dp
+                            modifier = Modifier.size(24.dp),
+                            color = MaterialTheme.colorScheme.onPrimary
                         )
                     } else {
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Google Icon (you can replace this with actual Google logo)
                             Icon(
-                                painter = painterResource(id = android.R.drawable.ic_dialog_info),
-                                contentDescription = "Google",
-                                modifier = Modifier.size(20.dp),
-                                tint = MaterialTheme.colorScheme.onPrimary
+                                Icons.Filled.Lock,
+                                contentDescription = "Google Login",
+                                modifier = Modifier.size(20.dp)
                             )
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Sign in with Google",
+                                "Masuk dengan Google",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Medium
                             )
                         }
                     }
                 }
-
-                // Terms and Privacy
+                
                 Text(
-                    text = "By signing in, you agree to our Terms of Service and Privacy Policy",
+                    text = "Dengan masuk, Anda menyetujui syarat dan ketentuan kami",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
-                    lineHeight = 16.sp
+                    modifier = Modifier.padding(top = 8.dp)
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun FeatureItem(emoji: String, title: String, description: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = emoji,
+            fontSize = 20.sp,
+            modifier = Modifier.padding(end = 12.dp)
+        )
+        Column {
+            Text(
+                text = title,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = description,
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            )
         }
     }
 }

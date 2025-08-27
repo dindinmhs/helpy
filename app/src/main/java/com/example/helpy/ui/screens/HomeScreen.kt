@@ -1,4 +1,3 @@
-
 package com.example.helpy.ui.screens
 
 import android.Manifest
@@ -11,6 +10,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
@@ -18,6 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -41,6 +42,7 @@ import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+
 @SuppressLint("MissingPermission")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,12 +94,6 @@ fun HomeScreen(
                     routePolyline?.let { mapView?.overlays?.remove(it) }
                     routePolyline = newPolyline
                 }
-            }
-        } else if (startPoint != null && endPoint != null && !isLoadingRoute) {
-            // If no path found, draw straight line
-            drawStraightLine(mapView, startPoint!!, endPoint!!) { newPolyline ->
-                routePolyline?.let { mapView?.overlays?.remove(it) }
-                routePolyline = newPolyline
             }
         }
     }
@@ -161,7 +157,31 @@ fun HomeScreen(
 
     Scaffold(
         floatingActionButton = {
-            Column(horizontalAlignment = Alignment.End) {
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Route Clear Button (if route exists)
+                if (routePath.isNotEmpty()) {
+                    FloatingActionButton(
+                        onClick = {
+                            mapViewModel.clearRoute()
+                            routePolyline?.let { mapView?.overlays?.remove(it) }
+                            routePolyline = null
+                            mapView?.invalidate()
+                        },
+                        modifier = Modifier.size(48.dp),
+                        containerColor = MaterialTheme.colorScheme.secondary
+                    ) {
+                        Icon(
+                            Icons.Filled.Clear,
+                            contentDescription = "Clear Route",
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+                
+                // Current Location Button
                 FloatingActionButton(
                     onClick = {
                         if (hasLocationPermission(context)) {
@@ -182,31 +202,47 @@ fun HomeScreen(
                             )
                         }
                     },
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    modifier = Modifier.size(56.dp),
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
                 ) {
-                    Icon(Icons.Filled.LocationOn, "Lokasi Saya")
+                    Icon(
+                        Icons.Filled.LocationOn,
+                        contentDescription = "Lokasi Saya",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
                 }
 
+                // Find Route Button
                 FloatingActionButton(
                     onClick = {
                         if (startPoint != null && endPoint != null && !isLoadingRoute) {
                             mapViewModel.findRoute()
                         }
                     },
+                    modifier = Modifier.size(64.dp),
                     containerColor = if (isLoadingRoute) MaterialTheme.colorScheme.secondary
-                    else MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.primary,
+                    elevation = FloatingActionButtonDefaults.elevation(
+                        defaultElevation = 8.dp
+                    )
                 ) {
                     if (isLoadingRoute) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = MaterialTheme.colorScheme.onSecondary
+                            modifier = Modifier.size(28.dp),
+                            color = MaterialTheme.colorScheme.onSecondary,
+                            strokeWidth = 3.dp
                         )
                     } else {
-                        Icon(Icons.Filled.PlayArrow, "Gambar Rute")
+                        Icon(
+                            Icons.Filled.PlayArrow,
+                            contentDescription = "Gambar Rute",
+                            modifier = Modifier.size(28.dp)
+                        )
                     }
                 }
             }
-        }
+        },
+        floatingActionButtonPosition = FabPosition.End
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -259,6 +295,72 @@ fun HomeScreen(
                 },
                 modifier = Modifier.fillMaxSize()
             )
+            
+            // Route status info
+            if (isLoadingRoute) {
+                Card(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "Menjalankan Algoritma A*",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Mencari rute tercepat...",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            }
+            
+            // Route info when path is found
+            if (routePath.isNotEmpty() && !isLoadingRoute) {
+                Card(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "✅ Rute Ditemukan!",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "A* menemukan ${routePath.size} titik navigasi",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            }
         }
     }
 }
