@@ -21,7 +21,7 @@ class AuthManager(private val context: Context) {
     private val credentialManager = CredentialManager.create(context)
 
     // Web client ID dari Firebase Console
-    private val webClientId = "xx"
+    private val webClientId = "1091745909445-oc382h1sanjs5hv1qpoha2mojs6sgss9.apps.googleusercontent.com"
     private val _currentUser = MutableStateFlow<FirebaseUser?>(auth.currentUser)
     val currentUser: StateFlow<FirebaseUser?> = _currentUser.asStateFlow()
 
