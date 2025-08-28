@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -20,6 +21,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.helpy.ui.screens.HomeScreen
 import com.example.helpy.ui.screens.LoginScreen
 import com.example.helpy.ui.theme.HelpyTheme
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.*
+import com.example.helpy.ui.screens.SOSScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,16 +53,51 @@ fun MyApp() {
     var isLoggedIn by remember { mutableStateOf(false) }
     val currentUser by authViewModel.currentUser.collectAsState()
 
+    // State untuk tab yang aktif (0 = SOS, 1 = Map)
+    var selectedTab by remember { mutableStateOf(0) }
+
     // Update login state based on current user
     LaunchedEffect(currentUser) {
         isLoggedIn = currentUser != null
+        // Reset ke tab SOS saat login
+        if (currentUser != null) {
+            selectedTab = 0
+        }
     }
 
     if (isLoggedIn) {
-        HomeScreen(
-            authViewModel = authViewModel,
-            onLogout = { isLoggedIn = false }
-        )
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Tab Row
+            TabRow(
+                selectedTabIndex = selectedTab,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Tab(
+                    text = { Text("SOS") },
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    icon = { Icon(Icons.Filled.Warning, contentDescription = "SOS") }
+                )
+                Tab(
+                    text = { Text("Map") },
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    icon = { Icon(Icons.Filled.LocationOn, contentDescription = "Map") }
+                )
+            }
+
+            // Content berdasarkan tab yang dipilih
+            when (selectedTab) {
+                0 -> SOSScreen(
+                    authViewModel = authViewModel,
+                    onLogout = { isLoggedIn = false }
+                )
+                1 -> HomeScreen(
+                    authViewModel = authViewModel,
+                    onLogout = { isLoggedIn = false }
+                )
+            }
+        }
     } else {
         LoginScreen(
             authViewModel = authViewModel,

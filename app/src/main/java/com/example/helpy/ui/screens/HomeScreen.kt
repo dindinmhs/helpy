@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,9 +25,12 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.helpy.AuthViewModel
+import com.example.helpy.data.SOSData
+import com.example.helpy.repository.SOSRepository
 import com.google.android.gms.location.LocationServices
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.osmdroid.config.Configuration
@@ -311,11 +315,16 @@ fun HomeScreen(
 ) {
     val currentUser by authViewModel.currentUser.collectAsState()
     val context = LocalContext.current
+    val sosRepository = remember { SOSRepository() } // Tambahkan ini
+
     var mapView: MapView? by remember { mutableStateOf(null) }
     var currentLocationOverlay: MyLocationNewOverlay? by remember { mutableStateOf(null) }
     var currentTargetMarker: Marker? by remember { mutableStateOf(null) }
     var routePolyline: Polyline? by remember { mutableStateOf(null) }
     var isLoadingRoute by remember { mutableStateOf(false) }
+    var selectedSOSLocation: GeoPoint? by remember { mutableStateOf(null) }
+    var selectedSOSInfo: SOSData? by remember { mutableStateOf(null) }
+    var sosMarkers by remember { mutableStateOf<List<Marker>>(emptyList()) } // Tambahkan ini
 
     var startPoint: GeoPoint? by remember { mutableStateOf(null) }
     var endPoint: GeoPoint? by remember { mutableStateOf(null) }
@@ -330,6 +339,12 @@ fun HomeScreen(
     }
 
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
+
+    LaunchedEffect(Unit) {
+        loadActiveSOSAlerts(sosRepository, mapView) { markers ->
+            sosMarkers = markers
+        }
+    }
 
     // State untuk menangani permintaan izin lokasi
     val locationPermissionRequest = rememberLauncherForActivityResult(
@@ -401,6 +416,21 @@ fun HomeScreen(
         },
         floatingActionButton = {
             Column(horizontalAlignment = Alignment.End) {
+                // Refresh SOS button
+                FloatingActionButton(
+                    onClick = {
+                        loadActiveSOSAlertsWithNavigation(sosRepository, mapView) { sosLocation, sosData ->
+                            selectedSOSLocation = sosLocation
+                            selectedSOSInfo = sosData
+                            endPoint = sosLocation
+                        }
+                    },
+                    modifier = Modifier.padding(bottom = 8.dp),
+                    containerColor = MaterialTheme.colorScheme.tertiary
+                ) {
+                    Icon(Icons.Filled.Refresh, "Refresh SOS")
+                }
+
                 FloatingActionButton(
                     onClick = {
                         if (hasLocationPermission(context)) {
@@ -426,15 +456,16 @@ fun HomeScreen(
                     Icon(Icons.Filled.LocationOn, "Lokasi Saya")
                 }
 
+                // Route button - hanya satu yang berfungsi untuk SOS navigation
                 FloatingActionButton(
                     onClick = {
-                        if (startPoint != null && endPoint != null && !isLoadingRoute) {
+                        if (startPoint != null && selectedSOSLocation != null && !isLoadingRoute) {
                             isLoadingRoute = true
                             findAndDrawRoute(
                                 overpassApi = overpassApi,
                                 mapView = mapView,
                                 start = startPoint!!,
-                                end = endPoint!!
+                                end = selectedSOSLocation!!
                             ) { newPolyline ->
                                 routePolyline?.let { mapView?.overlays?.remove(it) }
                                 routePolyline = newPolyline
@@ -443,7 +474,8 @@ fun HomeScreen(
                         }
                     },
                     containerColor = if (isLoadingRoute) MaterialTheme.colorScheme.secondary
-                    else MaterialTheme.colorScheme.primary
+                    else if (selectedSOSLocation != null) MaterialTheme.colorScheme.primary
+                    else androidx.compose.ui.graphics.Color.Gray
                 ) {
                     if (isLoadingRoute) {
                         CircularProgressIndicator(
@@ -451,7 +483,7 @@ fun HomeScreen(
                             color = MaterialTheme.colorScheme.onSecondary
                         )
                     } else {
-                        Icon(Icons.Filled.PlayArrow, "Gambar Rute")
+                        Icon(Icons.Filled.PlayArrow, "Navigate to SOS")
                     }
                 }
             }
@@ -462,6 +494,37 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            selectedSOSInfo?.let { sosInfo ->
+                Card(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(16.dp)
+                        .fillMaxWidth(0.8f),
+                    colors = CardDefaults.cardColors(
+                        containerColor = androidx.compose.ui.graphics.Color.Red.copy(alpha = 0.9f)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp)
+                    ) {
+                        Text(
+                            text = "SOS Alert Selected",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = androidx.compose.ui.graphics.Color.White
+                        )
+                        Text(
+                            text = "User: ${sosInfo.userEmail}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = androidx.compose.ui.graphics.Color.White
+                        )
+                        Text(
+                            text = "Tap route button to navigate",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = androidx.compose.ui.graphics.Color.White
+                        )
+                    }
+                }
+            }
             AndroidView(
                 factory = { ctx ->
                     Configuration.getInstance().load(
@@ -483,26 +546,27 @@ fun HomeScreen(
 
                         val mapEventsReceiver = object : MapEventsReceiver {
                             override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean {
-                                p?.let { geoPoint ->
-                                    endPoint = geoPoint
-                                    currentTargetMarker?.let { overlays.remove(it) }
-
-                                    val targetMarker = Marker(this@apply)
-                                    targetMarker.position = geoPoint
-                                    targetMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                                    targetMarker.title = "Tujuan"
-                                    overlays.add(targetMarker)
-                                    currentTargetMarker = targetMarker
-                                    this@apply.invalidate()
-                                }
-                                return true
+                                return false // Hapus manual destination setting
                             }
-
                             override fun longPressHelper(p: GeoPoint?): Boolean = false
                         }
 
                         val mapEventsOverlay = MapEventsOverlay(mapEventsReceiver)
                         overlays.add(0, mapEventsOverlay)
+                        mapView = this
+
+                        // Load SOS alerts setelah map siap
+                        CoroutineScope(Dispatchers.Main).launch {
+                            delay(500) // Tunggu map siap
+                            loadActiveSOSAlertsWithNavigation(sosRepository,
+                                mapView!!
+                            ) { sosLocation, sosData ->
+                                selectedSOSLocation = sosLocation
+                                selectedSOSInfo = sosData
+                                endPoint = sosLocation // Set endPoint untuk navigasi
+                            }
+                        }
+
                         mapView = this
                     }
                 },
@@ -510,6 +574,126 @@ fun HomeScreen(
             )
         }
     }
+}
+
+private fun loadActiveSOSAlertsWithNavigation(
+    sosRepository: SOSRepository,
+    mapView: MapView?,
+    onSOSSelected: (GeoPoint, SOSData) -> Unit // Tambah parameter SOSData
+) {
+    CoroutineScope(Dispatchers.IO).launch {
+        try {
+            val result = sosRepository.getAllActiveSOSAlerts()
+            if (result.isSuccess) {
+                val sosAlerts = result.getOrNull() ?: emptyList()
+
+                withContext(Dispatchers.Main) {
+                    // Hapus marker SOS lama
+                    val oldSOSMarkers = mapView?.overlays?.filterIsInstance<Marker>()
+                        ?.filter { it.title?.startsWith("SOS:") == true }
+                    oldSOSMarkers?.forEach { mapView.overlays.remove(it) }
+
+                    // Tambahkan marker SOS baru
+                    sosAlerts.forEach { sosData ->
+                        val marker = Marker(mapView)
+                        marker.position = GeoPoint(sosData.latitude, sosData.longitude)
+                        marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                        marker.title = "SOS: ${sosData.userEmail}"
+                        marker.snippet = "Emergency Alert - Selected for navigation"
+
+                        marker.setOnMarkerClickListener { _, _ ->
+                            val sosLocation = GeoPoint(sosData.latitude, sosData.longitude)
+                            onSOSSelected(sosLocation, sosData) // Pass SOSData juga
+                            true
+                        }
+
+                        mapView?.overlays?.add(marker)
+                    }
+
+                    mapView?.invalidate()
+                }
+            }
+        } catch (e: Exception) {
+            println("Error loading SOS alerts: ${e.message}")
+        }
+    }
+}
+
+private fun loadActiveSOSAlerts(
+    sosRepository: SOSRepository,
+    mapView: MapView?,
+    onMarkersLoaded: (List<Marker>) -> Unit
+) {
+    CoroutineScope(Dispatchers.IO).launch {
+        try {
+            val result = sosRepository.getAllActiveSOSAlerts()
+            if (result.isSuccess) {
+                val sosAlerts = result.getOrNull() ?: emptyList()
+
+                withContext(Dispatchers.Main) {
+                    mapView?.let { map ->
+                        // Hapus marker SOS lama
+                        val oldSOSMarkers = map.overlays.filterIsInstance<Marker>()
+                            .filter { it.title?.startsWith("SOS:") == true }
+                        oldSOSMarkers.forEach { map.overlays.remove(it) }
+
+                        // Tambahkan marker SOS baru
+                        val newMarkers = mutableListOf<Marker>()
+                        sosAlerts.forEach { sosData ->
+                            val marker = Marker(map)
+                            marker.position = GeoPoint(sosData.latitude, sosData.longitude)
+                            marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                            marker.title = "SOS: ${sosData.userEmail}"
+                            marker.snippet = "Emergency Alert - Tap to navigate"
+
+                            // Set custom icon untuk SOS (opsional, bisa pakai default)
+                            // marker.icon = ContextCompat.getDrawable(context, R.drawable.sos_icon)
+
+                            // Set OnMarkerClickListener untuk navigasi
+                            marker.setOnMarkerClickListener { clickedMarker, _ ->
+                                // Set sebagai destination dan mulai navigasi
+                                val sosLocation = GeoPoint(sosData.latitude, sosData.longitude)
+
+                                // Hapus target marker lama
+                                map.overlays.filterIsInstance<Marker>()
+                                    .find { it.title == "Tujuan" }
+                                    ?.let { map.overlays.remove(it) }
+
+                                // Tambahkan target marker baru
+                                val targetMarker = Marker(map)
+                                targetMarker.position = sosLocation
+                                targetMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                                targetMarker.title = "Tujuan"
+                                targetMarker.snippet = "Navigating to SOS Alert"
+                                map.overlays.add(targetMarker)
+
+                                // Set endPoint untuk navigasi
+                                // Ini perlu diakses dari scope yang lebih luas
+                                // Kita akan handle ini dengan callback
+                                navigateToSOS(sosLocation)
+
+                                map.invalidate()
+                                true
+                            }
+
+                            map.overlays.add(marker)
+                            newMarkers.add(marker)
+                        }
+
+                        map.invalidate()
+                        onMarkersLoaded(newMarkers)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            println("Error loading SOS alerts: ${e.message}")
+        }
+    }
+}
+private fun navigateToSOS(sosLocation: GeoPoint) {
+    // Ini akan dipanggil dari marker click
+    // Kita perlu cara untuk mengakses state endPoint dari sini
+    // Solusinya adalah dengan menggunakan callback atau state hoisting
 }
 
 // Function to find and draw route using Overpass API and A*
