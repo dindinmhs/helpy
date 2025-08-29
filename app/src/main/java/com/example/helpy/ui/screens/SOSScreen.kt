@@ -7,15 +7,23 @@ import android.content.pm.PackageManager
 import android.location.Location
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -27,9 +35,14 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.helpy.AuthViewModel
 import com.example.helpy.data.SOSData
@@ -81,100 +94,155 @@ fun SOSScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Emergency SOS") },
-                actions = {
-                    IconButton(onClick = { authViewModel.signOut() }) {
-                        Icon(Icons.Filled.ExitToApp, "Logout")
-                    }
-                }
-            )
-        }
-    ) { paddingValues ->
-        Column(
+    Scaffold { paddingValues ->
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .padding(paddingValues)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(Color(0xFFE3F2FD), Color.White)
+                    )
+                ),
+            contentAlignment = Alignment.Center
         ) {
-
-            // Status message
-            if (statusMessage.isNotEmpty()) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(24.dp) // kasih jarak antar elemen
+            ) {
+                // Header Title
                 Text(
-                    text = statusMessage,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(16.dp)
+                    text = "🚨 Emergency SOS",
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    ),
+                    textAlign = TextAlign.Center
                 )
-            }
 
-            // Loading indicator
-            if (isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.padding(16.dp)
-                )
-            }
 
-            // SOS Button
-            Button(
-                onClick = {
-                    if (!isSOSActive) {
-                        // Check location permission first
-                        if (hasLocationPermission(context)) {
-                            sendSOSAlert(
-                                context = context,
-                                fusedLocationClient = fusedLocationClient,
-                                sosRepository = sosRepository,
-                                currentUser = currentUser,
-                                setLoading = { isLoading = it },
-                                setMessage = { statusMessage = it },
-                                setSOSActive = { isSOSActive = it },
-                                setSOSId = { currentSOSId = it }
-                            )
-                        } else {
-                            locationPermissionRequest.launch(
-                                arrayOf(
-                                    Manifest.permission.ACCESS_FINE_LOCATION,
-                                    Manifest.permission.ACCESS_COARSE_LOCATION
+                // SOS Button
+                Button(
+                    onClick = {
+                        if (!isSOSActive) {
+                            if (hasLocationPermission(context)) {
+                                sendSOSAlert(
+                                    context,
+                                    fusedLocationClient,
+                                    sosRepository,
+                                    currentUser,
+                                    { isLoading = it },
+                                    { statusMessage = it },
+                                    { isSOSActive = it },
+                                    { currentSOSId = it }
                                 )
+                            } else {
+                                locationPermissionRequest.launch(
+                                    arrayOf(
+                                        Manifest.permission.ACCESS_FINE_LOCATION,
+                                        Manifest.permission.ACCESS_COARSE_LOCATION
+                                    )
+                                )
+                            }
+                        } else {
+                            deactivateSOS(
+                                sosRepository,
+                                currentSOSId,
+                                { isLoading = it },
+                                { statusMessage = it },
+                                { isSOSActive = it },
+                                { currentSOSId = it }
                             )
                         }
-                    } else {
-                        // Deactivate SOS
-                        deactivateSOS(
-                            sosRepository = sosRepository,
-                            sosId = currentSOSId,
-                            setLoading = { isLoading = it },
-                            setMessage = { statusMessage = it },
-                            setSOSActive = { isSOSActive = it },
-                            setSOSId = { currentSOSId = it }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isSOSActive) Color.Gray else Color.Red
+                    ),
+                    shape = CircleShape,
+                    modifier = Modifier
+                        .size(220.dp) // tombol lebih besar
+                        .shadow(16.dp, CircleShape),
+                    enabled = !isLoading
+                ) {
+                    Text(
+                        text = if (isSOSActive) "DEACTIVATE" else "SOS",
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 28.sp
+                        ),
+                        color = Color.White
+                    )
+                }
+
+                // Instructions
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "📍 Pastikan GPS aktif",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = "📶 Pastikan sinyal stabil",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = "⚡ Tekan tombol dalam keadaan darurat",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                // Status Section
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.padding(8.dp),
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
-                },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isSOSActive) Color.Gray else Color.Red
-                ),
-                modifier = Modifier.size(200.dp),
-                enabled = !isLoading
-            ) {
-                Text(
-                    text = if (isSOSActive) "DEACTIVATE" else "SOS",
-                    style = MaterialTheme.typography.headlineLarge
-                )
-            }
 
-            if (isSOSActive) {
-                Text(
-                    text = "SOS Alert Active",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Color.Red,
-                    modifier = Modifier.padding(top = 16.dp)
-                )
+                    if (statusMessage.isNotEmpty()) {
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color(0xFFE3F2FD).copy(alpha = 0.5f)
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(
+                                text = statusMessage,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.DarkGray,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(12.dp)
+                            )
+                        }
+                    }
+
+                    if (isSOSActive) {
+                        Text(
+                            text = "🚨 SOS Active",
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
+                }
             }
         }
     }
+
 }
 
 // Utility function untuk check permission

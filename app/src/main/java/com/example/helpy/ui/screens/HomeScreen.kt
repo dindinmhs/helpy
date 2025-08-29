@@ -404,16 +404,6 @@ fun HomeScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Peta Navigasi") },
-                actions = {
-                    IconButton(onClick = { authViewModel.signOut() }) {
-                        Icon(Icons.Filled.ExitToApp, "Logout")
-                    }
-                }
-            )
-        },
         floatingActionButton = {
             Column(horizontalAlignment = Alignment.End) {
                 // Refresh SOS button
@@ -451,7 +441,9 @@ fun HomeScreen(
                             )
                         }
                     },
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    modifier = Modifier.padding(bottom = 8.dp),
+                    containerColor = MaterialTheme.colorScheme.primary
+
                 ) {
                     Icon(Icons.Filled.LocationOn, "Lokasi Saya")
                 }
@@ -473,14 +465,15 @@ fun HomeScreen(
                             }
                         }
                     },
+                    modifier = Modifier.padding(bottom = 100.dp),
                     containerColor = if (isLoadingRoute) MaterialTheme.colorScheme.secondary
                     else if (selectedSOSLocation != null) MaterialTheme.colorScheme.primary
-                    else androidx.compose.ui.graphics.Color.Gray
+                    else MaterialTheme.colorScheme.tertiary
                 ) {
                     if (isLoadingRoute) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(24.dp),
-                            color = MaterialTheme.colorScheme.onSecondary
+                            color = MaterialTheme.colorScheme.secondary
                         )
                     } else {
                         Icon(Icons.Filled.PlayArrow, "Navigate to SOS")

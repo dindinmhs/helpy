@@ -1,9 +1,14 @@
 package com.example.helpy
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
@@ -22,10 +27,22 @@ import com.example.helpy.ui.screens.HomeScreen
 import com.example.helpy.ui.screens.LoginScreen
 import com.example.helpy.ui.theme.HelpyTheme
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
+import com.example.helpy.ui.screens.ProfileScreen
 import com.example.helpy.ui.screens.SOSScreen
 
 class MainActivity : ComponentActivity() {
@@ -66,27 +83,8 @@ fun MyApp() {
     }
 
     if (isLoggedIn) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Tab Row
-            TabRow(
-                selectedTabIndex = selectedTab,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Tab(
-                    text = { Text("SOS") },
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    icon = { Icon(Icons.Filled.Warning, contentDescription = "SOS") }
-                )
-                Tab(
-                    text = { Text("Map") },
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    icon = { Icon(Icons.Filled.LocationOn, contentDescription = "Map") }
-                )
-            }
-
-            // Content berdasarkan tab yang dipilih
+        Box(modifier = Modifier.fillMaxSize()) {
+            // 👉 Konten utama tetap fullscreen
             when (selectedTab) {
                 0 -> SOSScreen(
                     authViewModel = authViewModel,
@@ -96,7 +94,89 @@ fun MyApp() {
                     authViewModel = authViewModel,
                     onLogout = { isLoggedIn = false }
                 )
+                2 -> ProfileScreen(
+                    authViewModel = authViewModel,
+                    onLogout = { isLoggedIn = false },
+                    onUpdateProfile = { name, phone, address, photoUri ->
+                        Log.d("ProfileUpdate", "Name=$name, Phone=$phone, Address=$address, Photo=$photoUri")
+                    }
+                )
             }
+
+            // 👉 Floating Bottom Navigation
+            Surface(
+                shape = RoundedCornerShape(50),
+                tonalElevation = 6.dp,
+                shadowElevation = 12.dp,
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 60.dp)
+                    .fillMaxWidth(0.85f)
+                    .height(65.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 24.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.weight(1f).clickable { selectedTab = 0 }
+                    ) {
+                        Icon(
+                            Icons.Filled.Warning,
+                            contentDescription = "SOS",
+                            tint = if (selectedTab == 0) MaterialTheme.colorScheme.primary else Color.Gray
+                        )
+                        Text(
+                            "SOS",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (selectedTab == 0) MaterialTheme.colorScheme.primary else Color.Gray
+                        )
+                    }
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.weight(1f).clickable { selectedTab = 1 }
+                    ) {
+                        Icon(
+                            Icons.Filled.LocationOn,
+                            contentDescription = "Map",
+                            tint = if (selectedTab == 1) MaterialTheme.colorScheme.primary else Color.Gray
+                        )
+                        Text(
+                            "Map",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (selectedTab == 1) MaterialTheme.colorScheme.primary else Color.Gray
+                        )
+                    }
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.weight(1f).clickable { selectedTab = 2 }
+                    ) {
+                        Icon(
+                            Icons.Filled.Person,
+                            contentDescription = "Profile",
+                            tint = if (selectedTab == 2) MaterialTheme.colorScheme.primary else Color.Gray
+                        )
+                        Text(
+                            "Profile",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (selectedTab == 2) MaterialTheme.colorScheme.primary else Color.Gray
+                        )
+                    }
+                }
+            }
+
+
+
         }
     } else {
         LoginScreen(
@@ -105,3 +185,5 @@ fun MyApp() {
         )
     }
 }
+
+
