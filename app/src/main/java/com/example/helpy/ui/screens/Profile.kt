@@ -121,41 +121,7 @@ fun Profile(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            item {
-                ProfileMenuItem(
-                    icon = Icons.Filled.Email,
-                    title = "Email",
-                    subtitle = currentUser?.email ?: "No email",
-                    onClick = { /* TODO: Handle email action */ }
-                )
-            }
-            
-            item {
-                ProfileMenuItem(
-                    icon = Icons.Filled.Phone,
-                    title = "Emergency Contacts",
-                    subtitle = "Manage emergency contacts",
-                    onClick = { /* TODO: Handle emergency contacts */ }
-                )
-            }
-            
-            item {
-                ProfileMenuItem(
-                    icon = Icons.Filled.Settings,
-                    title = "Pengaturan",
-                    subtitle = "Kelola preferensi aplikasi",
-                    onClick = { /* TODO: Handle settings */ }
-                )
-            }
-            
-            item {
-                ProfileMenuItem(
-                    icon = Icons.Filled.Info,
-                    title = "Tentang Aplikasi",
-                    subtitle = "Versi 1.0.0 - Helpy Navigation",
-                    onClick = { /* TODO: Handle about */ }
-                )
-            }
+
             
             item {
                 Spacer(modifier = Modifier.height(16.dp))

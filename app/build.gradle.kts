@@ -52,6 +52,10 @@ dependencies {
     // Firebase BOM - this manages all Firebase library versions
     implementation(platform(libs.firebase.bom))
     implementation(libs.bundles.firebase)
+    implementation(libs.firebase.analytics)
+    implementation(libs.firebase.database)
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.messaging)
     // Image Loading
     implementation(libs.coil.compose)
 

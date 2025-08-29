@@ -45,6 +45,9 @@ androidx-compose-runtime-livedata = { group = "androidx.compose.runtime", name =
 # Firebase
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
 firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
+firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics" }
+firebase-database = { group = "com.google.firebase", name = "firebase-database" }
+firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
 
 # Google Sign-In & Credentials
 play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "playServicesAuth" }

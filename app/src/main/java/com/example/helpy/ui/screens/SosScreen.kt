@@ -21,6 +21,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.helpy.ui.screens.sos.SosViewModel
 
 data class EmergencyContact(
     val name: String,
@@ -30,7 +33,7 @@ data class EmergencyContact(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SosScreen() {
+fun SosScreen(viewModel: SosViewModel) {
     val emergencyContacts = listOf(
         EmergencyContact("Polisi", "110", "Keamanan & Ketertiban"),
         EmergencyContact("Pemadam Kebakaran", "113", "Kebakaran & Penyelamatan"),
@@ -116,7 +119,9 @@ fun SosScreen() {
                 Button(
                     onClick = {
                         isPressed = true
-                        // TODO: Implement emergency call functionality
+                        val lat = -6.912
+                        val lng = 107.623
+                        viewModel.sendSos(lat,lng)
                     },
                     modifier = Modifier
                         .size(180.dp)

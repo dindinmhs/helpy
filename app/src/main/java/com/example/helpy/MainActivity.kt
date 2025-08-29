@@ -26,11 +26,15 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.helpy.data.repository.SosRepositoryImpl
 import com.example.helpy.ui.screens.HomeScreen
 import com.example.helpy.ui.screens.LoginScreen
 import com.example.helpy.ui.screens.SosScreen
 import com.example.helpy.ui.screens.Profile
+import com.example.helpy.ui.screens.sos.SosViewModel
 import com.example.helpy.ui.theme.HelpyTheme
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.FirebaseDatabase
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -166,6 +170,14 @@ fun NavigationHost(
     onLogout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+
+    val sosRepository = remember {
+        SosRepositoryImpl(
+            auth = FirebaseAuth.getInstance(),
+            database = FirebaseDatabase.getInstance()
+        )
+    }
+    val sosViewModel = remember { SosViewModel(sosRepository) }
     NavHost(
         navController = navController,
         startDestination = BottomNavItem.Peta.route,
@@ -178,7 +190,7 @@ fun NavigationHost(
             )
         }
         composable(BottomNavItem.SOS.route) {
-            SosScreen()
+            SosScreen(viewModel = sosViewModel)
         }
         composable(BottomNavItem.Profile.route) {
             Profile(authViewModel = authViewModel)
